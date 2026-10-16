@@ -3,56 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solicitud de Tarjeta de Crédito</title>
+  <title>Sistema de Tarjeta de Crédito</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f2f4f8; display: flex; justify-content: center; padding: 40px; }
-    .card { background: white; padding: 30px; border-radius: 12px; width: 360px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h1 { font-size: 20px; margin-top: 0; }
+    body { font-family: Arial, sans-serif; background: #f2f4f8; margin: 0; padding: 30px; }
+    h1.titulo { text-align: center; margin-top: 0; }
+    .grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
+    .card { background: white; padding: 24px; border-radius: 12px; width: 340px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 18px; margin-top: 0; }
     label { display: block; margin-top: 12px; font-size: 14px; }
     input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
-    button { margin-top: 20px; width: 100%; padding: 10px; background: #1a56db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
-    #resultado { margin-top: 20px; padding: 12px; border-radius: 6px; display: none; }
+    button { margin-top: 18px; width: 100%; padding: 10px; background: #1a56db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
+    .resultado { margin-top: 16px; padding: 12px; border-radius: 6px; display: none; }
     .ok { background: #d1fae5; color: #065f46; }
     .no { background: #fee2e2; color: #991b1b; }
+    .oculto { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #e5e7eb; }
+    .fila { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Solicitud de Tarjeta de Crédito</h1>
-    <form id="form">
-      <label>Nombre <input type="text" id="nombre" required></label>
-      <label>Edad <input type="number" id="edad" required></label>
-      <label>Ingreso mensual (S/) <input type="number" id="ingreso" required></label>
-      <label>Deuda actual (S/) <input type="number" id="deuda" value="0" required></label>
-      <button type="submit">Evaluar solicitud</button>
-    </form>
-    <div id="resultado"></div>
+  <h1 class="titulo">Sistema de Tarjeta de Crédito</h1>
+
+  <div class="grid">
+    <!-- 1. Solicitud -->
+    <div class="card">
+      <h2>1. Solicitud de tarjeta</h2>
+      <form id="form">
+        <label>Nombre <input type="text" id="nombre" required></label>
+        <label>Edad <input type="number" id="edad" required></label>
+        <label>Ingreso mensual (S/) <input type="number" id="ingreso" required></label>
+        <label>Deuda actual (S/) <input type="number" id="deuda" value="0" required></label>
+        <button type="submit">Evaluar solicitud</button>
+      </form>
+      <div id="resultado" class="resultado"></div>
+    </div>
+
+    <!-- 2. Consumos -->
+    <div class="card oculto" id="seccionConsumo">
+      <h2>2. Registrar consumo</h2>
+      <form id="formConsumo">
+        <label>Comercio <input type="text" id="comercio" required></label>
+        <label>Monto (S/) <input type="number" id="monto" required></label>
+        <button type="submit">Procesar consumo</button>
+      </form>
+      <div id="resultadoConsumo" class="resultado"></div>
+      <table id="tabla">
+        <thead><tr><th>Comercio</th><th>Monto</th><th>Estado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- 3. Factura -->
+    <div class="card oculto" id="seccionFactura">
+      <h2>3. Facturación</h2>
+      <div id="factura"></div>
+    </div>
+
+    <!-- 4. Pagos -->
+    <div class="card oculto" id="seccionPago">
+      <h2>4. Pagar tarjeta</h2>
+      <form id="formPago">
+        <label>Monto a pagar (S/) <input type="number" id="montoPago" required></label>
+        <button type="submit">Registrar pago</button>
+      </form>
+      <div id="resultadoPago" class="resultado"></div>
+      <table id="tablaPagos">
+        <thead><tr><th>Monto</th><th>Estado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
+    function mostrar(id, ok, html) {
+      const caja = document.getElementById(id);
+      caja.style.display = "block";
+      caja.className = "resultado " + (ok ? "ok" : "no");
+      caja.innerHTML = html;
+    }
+
+    function mostrarSecciones(visible) {
+      ["seccionConsumo", "seccionFactura", "seccionPago"].forEach((id) => {
+        document.getElementById(id).classList.toggle("oculto", !visible);
+      });
+    }
+
+    async function actualizarFactura() {
+      const r = await (await fetch("/factura")).json();
+      if (r.error) return;
+      document.getElementById("factura").innerHTML = `
+        <div class="fila"><span>Línea aprobada</span><strong>S/ ${r.montoAprobado}</strong></div>
+        <div class="fila"><span>Consumos autorizados</span><strong>${r.cantidadConsumos}</strong></div>
+        <div class="fila"><span>Saldo pendiente</span><strong>S/ ${r.saldoPendiente}</strong></div>
+        <div class="fila"><span>Interés estimado (3%)</span><strong>S/ ${r.interesEstimado}</strong></div>
+        <div class="fila"><span>Pago mínimo (10%)</span><strong>S/ ${r.pagoMinimo}</strong></div>
+        <div class="fila"><span>Crédito disponible</span><strong>S/ ${r.disponible}</strong></div>`;
+    }
+
+    // 1. Solicitud
     document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const datos = {
         nombre: document.getElementById("nombre").value,
         edad: document.getElementById("edad").value,
         ingresoMensual: document.getElementById("ingreso").value,
         deudaActual: document.getElementById("deuda").value,
       };
-
-      const respuesta = await fetch("/evaluar", {
+      const r = await (await fetch("/evaluar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(datos),
-      });
-      const r = await respuesta.json();
+      })).json();
 
-      const caja = document.getElementById("resultado");
-      caja.style.display = "block";
-      caja.className = r.aprobado ? "ok" : "no";
-      caja.innerHTML = r.aprobado
+      mostrar("resultado", r.aprobado, r.aprobado
         ? `<strong>APROBADO</strong><br>${r.motivo}<br>Línea de crédito: S/ ${r.linea}`
-        : `<strong>RECHAZADO</strong><br>${r.motivo}`;
+        : `<strong>RECHAZADO</strong><br>${r.motivo}`);
+
+      mostrarSecciones(r.aprobado);
+      document.querySelector("#tabla tbody").innerHTML = "";
+      document.querySelector("#tablaPagos tbody").innerHTML = "";
+      document.getElementById("resultadoConsumo").style.display = "none";
+      document.getElementById("resultadoPago").style.display = "none";
+      if (r.aprobado) actualizarFactura();
+    });
+
+    // 2. Consumo
+    document.getElementById("formConsumo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await (await fetch("/consumo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          comercio: document.getElementById("comercio").value,
+          monto: document.getElementById("monto").value,
+        }),
+      })).json();
+
+      if (r.error) return mostrar("resultadoConsumo", false, r.error);
+
+      mostrar("resultadoConsumo", r.estado === "AUTORIZADO",
+        `<strong>${r.estado}</strong><br>${r.motivo}<br>Disponible: S/ ${r.disponible}`);
+      document.querySelector("#tabla tbody").innerHTML = r.historial
+        .map((op) => `<tr><td>${op.comercio}</td><td>S/ ${op.monto}</td><td>${op.estado}</td></tr>`)
+        .join("");
+      document.getElementById("formConsumo").reset();
+      actualizarFactura();
+    });
+
+    // 4. Pago
+    document.getElementById("formPago").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const r = await (await fetch("/pago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monto: document.getElementById("montoPago").value }),
+      })).json();
+
+      if (r.error) return mostrar("resultadoPago", false, r.error);
+
+      mostrar("resultadoPago", r.estado === "APLICADO",
+        `<strong>${r.estado}</strong><br>${r.motivo}<br>Disponible: S/ ${r.disponible}`);
+      document.querySelector("#tablaPagos tbody").innerHTML = r.historialPagos
+        .map((p) => `<tr><td>S/ ${p.monto}</td><td>${p.estado}</td></tr>`)
+        .join("");
+      document.getElementById("formPago").reset();
+      actualizarFactura();
     });
   </script>
 </body>

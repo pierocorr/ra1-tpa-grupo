@@ -1,22 +1,36 @@
 const SolicitudTarjeta = require("./SolicitudTarjeta");
 const EvaluacionCrediticia = require("./EvaluacionCrediticia");
+const AutorizacionProcesamiento = require("./autorizacionProcesamiento");
+const FacturacionCalculo = require("./facturacionCalculo");
+const PagoYAutorizacionCredito = require("./PagoyAutorizaciondeCredito");
 
 const solicitud = new SolicitudTarjeta("Juan Pérez", 25, 2500, 400);
-const evaluacion = new EvaluacionCrediticia();
-const resultado = evaluacion.evaluar(solicitud);
+const resultado = new EvaluacionCrediticia().evaluar(solicitud);
 
 console.log(`Solicitante: ${solicitud.nombre}`);
 console.log(`Resultado: ${resultado.aprobado ? "APROBADO" : "RECHAZADO"}`);
 console.log(`Motivo: ${resultado.motivo}`);
 
 if (resultado.aprobado) {
-  console.log(`Línea de crédito: S/ ${resultado.linea.montoAprobado}`);
-  resultado.linea.consumir(1000);
-  console.log(`Disponible tras consumir S/ 1000: S/ ${resultado.linea.disponible()}`);
-  const AutorizacionProcesamiento = require("./autorizacionProcesamiento");
-  const autorizacion = new AutorizacionProcesamiento(resultado.linea);
-  const caja = new AutorizacionProcesamiento(resultado.linea);
-  console.log(caja.procesar("Tienda Ripley", 2000));
-  console.log(caja.procesar("Supermercado", 20000)); // debe rechazar
-  console.log(`Disponible: S/ ${resultado.linea.disponible()}`);
+  const linea = resultado.linea;
+  console.log(`Línea de crédito: S/ ${linea.montoAprobado}`);
+
+  const mostrar = (op) =>
+    console.log(`${op.comercio} - S/ ${op.monto}: ${op.estado} (${op.motivo})`);
+
+  // Consumos
+  const caja = new AutorizacionProcesamiento(linea);
+  mostrar(caja.procesar("Tienda Ripley", 2000));
+  mostrar(caja.procesar("Supermercado", 20000));
+  console.log(`Disponible: S/ ${linea.disponible()}`);
+
+  // Facturación
+  const facturacion = new FacturacionCalculo(linea, caja.historial);
+  console.log("Factura:", facturacion.generarFactura());
+
+  // Pago
+  const pagos = new PagoYAutorizacionCredito(linea);
+  console.log("Pago:", pagos.pagar(500));
+  console.log(`Disponible tras pagar: S/ ${linea.disponible()}`);
+  console.log("Factura final:", facturacion.generarFactura());
 }
