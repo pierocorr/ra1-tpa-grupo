@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitud de Tarjeta de Crédito</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f4f8; display: flex; justify-content: center; padding: 40px; }
+    .card { background: white; padding: 30px; border-radius: 12px; width: 360px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    h1 { font-size: 20px; margin-top: 0; }
+    label { display: block; margin-top: 12px; font-size: 14px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 20px; width: 100%; padding: 10px; background: #1a56db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; }
+    #resultado { margin-top: 20px; padding: 12px; border-radius: 6px; display: none; }
+    .ok { background: #d1fae5; color: #065f46; }
+    .no { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Solicitud de Tarjeta de Crédito</h1>
+    <form id="form">
+      <label>Nombre <input type="text" id="nombre" required></label>
+      <label>Edad <input type="number" id="edad" required></label>
+      <label>Ingreso mensual (S/) <input type="number" id="ingreso" required></label>
+      <label>Deuda actual (S/) <input type="number" id="deuda" value="0" required></label>
+      <button type="submit">Evaluar solicitud</button>
+    </form>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const datos = {
+        nombre: document.getElementById("nombre").value,
+        edad: document.getElementById("edad").value,
+        ingresoMensual: document.getElementById("ingreso").value,
+        deudaActual: document.getElementById("deuda").value,
+      };
+
+      const respuesta = await fetch("/evaluar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos),
+      });
+      const r = await respuesta.json();
+
+      const caja = document.getElementById("resultado");
+      caja.style.display = "block";
+      caja.className = r.aprobado ? "ok" : "no";
+      caja.innerHTML = r.aprobado
+        ? `<strong>APROBADO</strong><br>${r.motivo}<br>Línea de crédito: S/ ${r.linea}`
+        : `<strong>RECHAZADO</strong><br>${r.motivo}`;
+    });
+  </script>
+</body>
+</html>
